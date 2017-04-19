@@ -171,10 +171,12 @@ module.exports = class Channel {
       });
 
       // bind unload function to force user disconnection
-      window.addEventListener('unload', function(e) {
-        // send synchronous disconnected event
-        that.disconnect(true);
-      });
+      if(typeof(global.addEventListener)!=="undefined"){
+        global.addEventListener('unload', function(e) {
+          // send synchronous disconnected event
+          that.disconnect(true);
+        });
+      }
     }, function(data) {
       that.readyState = EventSource.CLOSED;
       that._trigger.apply(that, ['state:error', data]);

@@ -4,8 +4,6 @@ var Channel = require('./channel');
 var KeyValues = require('./key_values');
 var System = require('./system');
 var PluginManager = require('./plugin_manager');
-var uxhr = require('uxhr');
-var when = require('when');
 require('./vendor/json.date-extensions');
 
 module.exports = class Client {
@@ -36,7 +34,7 @@ module.exports = class Client {
 
   constructor(options) {
     if (!options) { options = {}; }
-    this.endpoint = options.endpoint || options.url || window.location.origin;
+    this.endpoint = options.endpoint || options.url;
     this.app_id = options.app_id || options.appId || "";
     this.key = options.key || "";
 
@@ -188,23 +186,11 @@ module.exports = class Client {
    * @param {Object} data
    */
   request(segments, method, data) {
-    var payload, request_headers, deferred = when.defer(),
-        synchronous = false;
-
-    // FIXME: find a better way to write this
-    if (data && data._sync) {
-      delete data._sync;
-      synchronous = true;
-    }
-
-    // Compute payload
-    payload = this.getPayload(method, data);
+    var request_headers;
 
     // Compute request headers
     request_headers = this.getHeaders();
-    if (!(payload instanceof FormData)){
-      request_headers["Content-Type"] = 'application/json'; // exchange data via JSON to keep basic data types
-    }
+    request_headers["Content-Type"] = 'application/json';
 
     // Use method override? (some web servers doesn't respond to DELETE/PUT requests)
     if (method !== "GET" && method !== "POST" && this.options.method_override) {
@@ -212,40 +198,29 @@ module.exports = class Client {
       method = "POST";
     }
 
-    if (typeof(XDomainRequest) !== "undefined") {
-      // XMLHttpRequest#setRequestHeader isn't implemented on Internet Explorer's XDomainRequest
-      segments += this.getCredentialsParams();
-    }
+    var promise = fetch(this.endpoint + segments, {
+        method: method,
+        headers: request_headers,
+        body: this.getPayload(method, data)
+      }).then(function(response) {
+          var total, data = null;
 
-    deferred.promise.xhr = uxhr(this.endpoint + segments, payload, {
-      method: method,
-      headers: request_headers,
-      sync: synchronous,
-      success: function(response) {
-        var data = null;
-        try {
-          data = JSON.parseWithDate(response);
-        } catch(e) { }
+          try {
+            data = JSON.parseWithDate(response);
+          } catch(e) {
+            return response;
+          }
 
-        if (data === false || data === null || data.error) {
-          // log error on console
-          if (data && data.error) { console.error(data.error); }
-          deferred.resolver.reject(data);
-        } else {
-          deferred.resolver.resolve(data);
-        }
-      },
-      error: function(response) {
-        var data = null;
-        try {
-          data = JSON.parseWithDate(response);
-        } catch(e) { }
-        console.log("Error: ", data || "Invalid JSON response.");
-        deferred.resolver.reject(data);
-      }
-    });
+          // IE<10 doesn't have 'getAllResponseHeaders' method.
+          // responseHeaders = (xhr.getAllResponseHeaders && xhr.getAllResponseHeaders()) || "";
+          // get X-Total-Count for pagination
+          // total = responseHeaders.match(/x-total-count: ([^\n]+)/i);
+          // if (total) { data.total = parseInt(total[1]); }
 
-    return deferred.promise;
+          return data;
+      });
+
+    return promise;
   }
 
   /**

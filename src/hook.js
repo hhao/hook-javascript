@@ -17,14 +17,18 @@ var Hook = {
 //
 // Legacy browser support
 //
-if(typeof(window.FormData)==="undefined"){
+if(typeof(global.FormData)==="undefined"){
   // IE9<: prevent crash when FormData isn't defined.
-  window.FormData = function(){ this.append=function(){}; };
+  global.FormData = function(){ this.append=function(){}; };
 }
 
-if (!window.location.origin) {
-  // Support location.origin
-  window.location.origin = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port: '');
+Promise.prototype.otherwise = function(func) {
+  return this['catch'](func);
+}
+Promise.prototype.done = function(func) {
+  this.then(func);
+  this['catch'](func);
+  return this;
 }
 
 module.exports = Hook;

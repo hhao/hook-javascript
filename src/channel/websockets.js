@@ -31,7 +31,7 @@ class Websockets extends Events {
     this.client_id = null;
 
     if (!options.url) {
-      var scheme = window.location.protocol === 'https:' ? 'wss://' : 'ws://',
+      var scheme = /^(https)+/.test(client.url) ? 'wss://' : 'ws://',
           url = client.url.replace(/(?:https?:)?\/\//, scheme)
 
       if (url.match(/index\.php/)) {

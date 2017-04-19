@@ -4,7 +4,7 @@
   "description": "hook javascript client",
   "version": "0.3.0",
   "homepage": "http://github.com/doubleleft/hook-javascript",
-  "main": "dist/hook.js",
+  "main": "src/hook.js",
   "authors": [{
     "name": "Endel Dreyer",
     "email": "edreyer@doubleleft.com"

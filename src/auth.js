@@ -1,4 +1,9 @@
 var Events = require('./utils/events');
+var localStorage = typeof chrome !== 'undefined' && typeof chrome.storage !== 'undefined'
+    ? chrome.storage.local
+    : (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
+        ? window.localStorage
+        : require('localstorage-memory'));
 
 class Auth extends Events {
   /**
@@ -20,8 +25,8 @@ class Auth extends Events {
     this.currentUser = null;
 
     var now = new Date(),
-        tokenExpiration = new Date(window.localStorage.getItem(this.client.app_id + '-' + Auth.AUTH_TOKEN_EXPIRATION)),
-        currentUser = window.localStorage.getItem(this.client.app_id + '-' + Auth.AUTH_DATA_KEY);
+        tokenExpiration = new Date(localStorage.getItem(this.client.app_id + '-' + Auth.AUTH_TOKEN_EXPIRATION)),
+        currentUser = localStorage.getItem(this.client.app_id + '-' + Auth.AUTH_DATA_KEY);
 
     // Fill current user only when it isn't expired yet.
     if (currentUser && now.getTime() < tokenExpiration.getTime()) {
@@ -40,10 +45,10 @@ class Auth extends Events {
       this.trigger('logout', this.currentUser);
       this.currentUser = data;
 
-      window.localStorage.removeItem(this.client.app_id + '-' + Auth.AUTH_TOKEN_KEY);
-      window.localStorage.removeItem(this.client.app_id + '-' + Auth.AUTH_DATA_KEY);
+      localStorage.removeItem(this.client.app_id + '-' + Auth.AUTH_TOKEN_KEY);
+      localStorage.removeItem(this.client.app_id + '-' + Auth.AUTH_DATA_KEY);
     } else {
-      window.localStorage.setItem(this.client.app_id + '-' + Auth.AUTH_DATA_KEY, JSON.stringify(data));
+      localStorage.setItem(this.client.app_id + '-' + Auth.AUTH_DATA_KEY, JSON.stringify(data));
 
       // trigger login event
       this.currentUser = data;
@@ -181,11 +186,6 @@ class Auth extends Events {
    *
    */
   resetPassword(data) {
-    if (typeof(data)==="string") { data = { password: data }; }
-    if (typeof(data.token)==="undefined") {
-      data.token = window.location.href.match(/[\?|&]token=([a-z0-9]+)/);
-      data.token = (data.token && data.token[1]);
-    }
     if (typeof(data.token)!=="string") { throw new Error("forgot password token required. Remember to use 'auth.forgotPassword' before 'auth.resetPassword'."); }
     if (typeof(data.password)!=="string") { throw new Error("new password required."); }
     return this.client.post('auth/email/resetPassword', data);
@@ -212,14 +212,14 @@ class Auth extends Events {
    * @return {String|null}
    */
   getToken() {
-    return window.localStorage.getItem(this.client.app_id + '-' + Auth.AUTH_TOKEN_KEY);
+    return localStorage.getItem(this.client.app_id + '-' + Auth.AUTH_TOKEN_KEY);
   }
 
   _registerToken(data) {
     if (data.token) {
       // register authentication token on localStorage
-      window.localStorage.setItem(this.client.app_id + '-' + Auth.AUTH_TOKEN_KEY, data.token.token);
-      window.localStorage.setItem(this.client.app_id + '-' + Auth.AUTH_TOKEN_EXPIRATION, data.token.expire_at);
+      localStorage.setItem(this.client.app_id + '-' + Auth.AUTH_TOKEN_KEY, data.token.token);
+      localStorage.setItem(this.client.app_id + '-' + Auth.AUTH_TOKEN_EXPIRATION, data.token.expire_at);
       delete data.token;
 
       // Store curent user
