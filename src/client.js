@@ -186,11 +186,9 @@ module.exports = class Client {
    * @param {Object} data
    */
   request(segments, method, data) {
-    var request_headers;
-
     // Compute request headers
-    request_headers = this.getHeaders();
-    request_headers["Content-Type"] = 'application/json';
+    var request_headers = this.getHeaders();
+    request_headers["Content-Type"] = 'text/json';
 
     // Use method override? (some web servers doesn't respond to DELETE/PUT requests)
     if (method !== "GET" && method !== "POST" && this.options.method_override) {
@@ -198,26 +196,20 @@ module.exports = class Client {
       method = "POST";
     }
 
-    var promise = fetch(this.endpoint + segments, {
+    var url = this.endpoint + segments;
+    var initObj = {
         method: method,
-        headers: request_headers,
-        body: this.getPayload(method, data)
-      }).then(function(response) {
-          var total, data = null;
-
-          try {
-            data = JSON.parseWithDate(response);
-          } catch(e) {
-            return response;
-          }
-
-          // IE<10 doesn't have 'getAllResponseHeaders' method.
-          // responseHeaders = (xhr.getAllResponseHeaders && xhr.getAllResponseHeaders()) || "";
-          // get X-Total-Count for pagination
+        headers: request_headers
+    };
+    if (method === "GET") {
+        url = url + '?' + this.getPayload(method, data);
+    } else {
+        initObj['body'] = this.getPayload(method, data);
+    }
+    var promise = fetch(url, initObj).then(function(res) { 
           // total = responseHeaders.match(/x-total-count: ([^\n]+)/i);
           // if (total) { data.total = parseInt(total[1]); }
-
-          return data;
+          return res.json();
       });
 
     return promise;
